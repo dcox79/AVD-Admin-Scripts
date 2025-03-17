@@ -1,0 +1,169 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+I would like to tell you about Nerdio Manager for Enterprise, so that you can help me write scripted actions later in this chat.
+
+Nerdio Manager for Enterprise (NME) is a management portal for Azure AVD, Intune, Windows 365 CloudPC, and other Microsoft technologies. NME has a feature called Scripted Actions. Scripted Actions are powershell scripts that run either in the context of a single Azure VM, via an Azure custom script extension, or in the context of an Azure automation runbook. Scripted actions that run on a VM are called "Windows scripts" while scripted actions that run in an automation account are called "Azure runbooks." 
+
+Nerdio manager sets several variables before the script of a Scripted Action is run. These variables can be used in a scripted action without needing to define them first. The predefined variables include:
+
+$HostPoolId, This variable is defined if the script is associated with a host pool. It is the full resource ID of the Azure host pool resource
+$HostPoolName, This variable is defined if the script is associated with a host pool. It is the name of the host pool
+$AzureSubscriptionId, the guid of the Azure subscription. 
+$AzureSubscriptionName, the name of the Azure subscription. This variable is defined if the script is associated with a host pool or vm.
+$AzureResourceGroupName, the name of the Azure resource group. This variable is defined if the script is associated with a host pool or vm.
+$AzureRegionName, the name of the Azure region. This variable is defined if the script is associated with a host pool or vm.
+$AzureVMName, Available when the script is associated with a VM. The name of an Azure VM.
+$ADUsername, The username of an Active Directory user. This variable is defined if the option to pass AD credentials is selected when running the scripted action. 
+$ADPassword, The password of the active directory user. This variable is defined if the option to pass AD credentials is selected when running the scripted action. 
+$DesktopUser, The UPN of a user account associated with an AVD desktop. This variable is defined if the script is associated with a personal desktop.
+
+
+Scripted actions can also accept parameters at runtime. These runtime parameters do not need to include the above predefined parameters, as long as the script will be invoked in a context in which the relevant predefined parameters will be present. These parameters cannot be used if the scripted action is run on a host pool or Azure vm. If runtime variables are needed, the script will need to be run from the Scripted Actions page in NME. These runtime parameters must be defined in the script using json notation, inside of a comment block called 'variables'. Here is an example of the comment block that defines a scripted action's parameters:
+
+<# Variables:
+{
+  "VNetName": {
+    "Description": "VNet in which to create the temp VM. Can be same as AVD host vnet. Must be able to access the fslogix fileshare.",
+    "IsRequired": false
+  },
+  "SubnetName": {
+    "Description": "Subnet in which to create the temp VM.",
+    "IsRequired": false
+  },
+  "FileSharePath": {
+    "Description": "UNC path e.g. \\\\storageaccount.file.core.windows.net\\premiumfslogix01",
+    "IsRequired": false
+  },
+}
+#>
+
+
+Every scripted action should start with a comment line that includes a description of the scripted action, like this:
+#description: Description of what the scripted action does
+
+The next line can optionally include tags for organization of the scripts, like this:
+#tags: Nerdio, Preview
+
+
+Scripted actions can also use variables that must be passed securely. These variables are provided to the script in the form of a hashtable called $SecureVars, with each secure variable name as a key in the hashtable. For any variables that include sensitive information, such as passwords and secrets, the user should first create a Secure Variable in NME, so that the scripted actions can access the secure variables via the $SecureVars hashtable. 
+
+Azure runbook scripted actions do not need to authenticate to Azure. The authentication is handled by NME prior to executing the text of the scripted action.
+
+Here is an example of a NME scripted action that runs in an Azure automation account
+
+#description: Change OS disk type from SSD<>HDD on all stopped VMs in a host pool.  Useful as a scheduled task for personal host pools using user-driven auto-scale mode.
+#tags: Nerdio, Preview
+
+<# Notes:
+
+Change OS disk type from SSD<>HDD on all stopped VMs in a host pool.  Useful as a scheduled task 
+for personal host pools using user-driven auto-scale mode.
+
+This script must be run from the Scripted Actions window, and you must provide the Host Pool ID
+and Target OS Disk Type as parameters at runtime.
+
+By default, this script will change all disks to Premium SSD. To change to a different disk type,
+modify the $TargetOSDiskType variable below to your desired disk type. 
+
+Valid values are:
+Premium_SSD
+Standard_SSD 
+Standard_HDD
+
+#>
+
+<# Variables:
+{
+  "HostPoolId": {
+    "Description": "Full Id of the host pool, e.g. /subscriptions/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/resourceGroups/host-pool-rg/providers/Microsoft.DesktopVirtualization/hostpools/HostPoolName",
+    "IsRequired": true,
+    "DefaultValue": ""
+  },
+  "TargetOSDiskType": {
+    "Description": "Target OS disk type for stopped VMs in the host pool. Standard_SSD, Premium_SSD, or Standard_HDD",
+    "IsRequired": true,
+    "DefaultValue": "Premium_SSD"
+  }
+}
+#>
+
+$ErrorActionPreference = 'Stop'
+
+# Ensure correct subscription context is selected
+Set-AzContext -SubscriptionId $AzureSubscriptionID
+
+If ($TargetOSDiskType -notmatch 'Standard_SSD|Premium_SSD|Standard_HDD') {
+    Throw "Provided TargetOSDiskType is not Standard_SSD, Premium_SSD, or Standard_HDD"
+}
+
+$DiskDict = @{Standard_HDD = 'Standard_LRS'; Standard_SSD = 'StandardSSD_LRS'; Premium_SSD = 'Premium_LRS' }
+
+# Get Host Pool RG and Name
+$HostPool = Get-AzResource -ResourceId $HostpoolID
+$HostPoolRG = $HostPool.ResourceGroupName
+$HostPoolName = $Hostpool.Name
+
+# Parse the VM names from the host names
+$VmNames = (Get-AzWvdSessionHost -HostPoolName $HostPoolName -ResourceGroupName $HostPoolRG).name | ForEach-Object {($_ -replace "$HostPoolName/",'' -split '\.')[0]}
+
+$VMStatus = $VmNames | ForEach-Object {Get-AzVM -Name $_  -Status}
+
+$PoweredOffVms = $VMStatus | Where-Object PowerState -eq 'VM deallocated'
+
+if ($PoweredOffVms){
+    Write-output "Retrieved powered off VMs"
+}
+else {
+    Write-output "No powered off VMs"
+}
+
+Foreach ($VM in $PoweredOffVms) {
+    $Disk = Get-AzResource -ResourceId $vm.StorageProfile.OsDisk.ManagedDisk.id
+    $Disk = get-azdisk -DiskName $disk.name -ResourceGroupName $Disk.ResourceGroupName
+    if ($disk.sku.name -ne $DiskDict[$targetosdisktype]){
+        Write-output "Changing disk type for $($disk.name)"
+        $disk.Sku = [Microsoft.Azure.Management.Compute.Models.DiskSku]::new($DiskDict[$targetosdisktype])
+        $disk | Update-AzDisk
+    }
+    else {
+        Write-output "Disk $($disk.name) is already target disk type"
+    }
+}
+### End Script ###
+
+Windows scripts run as the system user.
+
+Here is an example of a Windows scripted action that installs Windows Updates:
+
+#description: Installs latest Windows updates
+#execution mode: IndividualWithRestart
+#tags: Nerdio
+<#
+Notes:
+This script will install ALL Windows updates using PSWindowsUpdate
+See: https://www.powershellgallery.com/packages/PSWindowsUpdate for details on
+how to customize and use the module for your needs.
+#>
+
+# Ensure PSWindowsUpdate is installed on the system.
+if(!(Get-installedmodule PSWindowsUpdate)){
+
+    # Ensure NuGet and PowershellGet are installed on system
+    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+    Install-Module PowershellGet -Force
+
+    # Install latest version of PSWindowsUpdate
+    Install-Module PSWindowsUpdate -Force
+}
+Import-Module PSWindowsUpdate -Force
+
+# Initiate download and install of all pending Windows updates
+Install-WindowsUpdate -AcceptAll -ForceInstall -IgnoreReboot
+
+### End Script ###
