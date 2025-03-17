@@ -1,13 +1,32 @@
-# Remote Teams Cache Cleaner for Azure Virtual Desktop
-# This script can be run remotely to clear a user's Teams cache on AVD session hosts
-# Author: David Cox
+#description: Clears Teams cache for a specific user to resolve microphone and camera access issues
+#tags: Teams, AVD, Troubleshooting
 
-param (
+<# Notes:
+This script clears the Teams cache for a specific user to resolve common issues like:
+- Loss of microphone access
+- Camera not working
+- Audio device selection problems
+- Teams freezing or crashing
+
+The script will:
+1. Stop Teams processes for the specified user
+2. Clear their Teams cache
+3. Restart Teams for that user
+#>
+
+<# Variables:
+{
+    "UserName": {
+        "Description": "Username (domain\\username or UPN format) of the user whose Teams cache needs to be cleared",
+        "IsRequired": true,
+        "DefaultValue": ""
+    }
+}
+#>
+
+param(
     [Parameter(Mandatory=$true)]
-    [string]$UserName,
-    
-    [Parameter(Mandatory=$false)]
-    [string]$SessionHostName = $env:COMPUTERNAME
+    [string]$UserName
 )
 
 function Clear-TeamsCache {
@@ -108,48 +127,21 @@ function Restart-TeamsForUser {
 }
 
 # Main script execution
-Write-Output "Starting Teams cache cleanup for user: $UserName on host: $SessionHostName"
+Write-Output "Starting Teams cache cleanup for user: $UserName"
 
-# If running remotely, use Invoke-Command
-if ($SessionHostName -ne $env:COMPUTERNAME) {
-    Invoke-Command -ComputerName $SessionHostName -ScriptBlock {
-        param($UserName)
-        
-        # Find the user's SID
-        $userSID = (New-Object System.Security.Principal.NTAccount($UserName)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-        
-        if (-not $userSID) {
-            Write-Error "Could not find SID for user: $UserName"
-            return
-        }
-        
-        # Import functions
-        ${function:Clear-TeamsCache} = $using:function:Clear-TeamsCache
-        ${function:Restart-TeamsForUser} = $using:function:Restart-TeamsForUser
-        
-        # Execute the functions
-        $cacheCleared = Clear-TeamsCache -UserSID $userSID
-        
-        if ($cacheCleared) {
-            Restart-TeamsForUser -UserSID $userSID
-        }
-    } -ArgumentList $UserName
-} else {
-    # Running locally
-    # Find the user's SID
-    $userSID = (New-Object System.Security.Principal.NTAccount($UserName)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-    
-    if (-not $userSID) {
-        Write-Error "Could not find SID for user: $UserName"
-        return
-    }
-    
-    # Execute the functions
-    $cacheCleared = Clear-TeamsCache -UserSID $userSID
-    
-    if ($cacheCleared) {
-        Restart-TeamsForUser -UserSID $userSID
-    }
+# Find the user's SID
+$userSID = (New-Object System.Security.Principal.NTAccount($UserName)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+if (-not $userSID) {
+    Write-Error "Could not find SID for user: $UserName"
+    return
+}
+
+# Execute the functions
+$cacheCleared = Clear-TeamsCache -UserSID $userSID
+
+if ($cacheCleared) {
+    Restart-TeamsForUser -UserSID $userSID
 }
 
 Write-Output "Teams cache cleanup completed for user: $UserName" 
