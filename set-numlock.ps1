@@ -9,7 +9,7 @@
     0 - Compliant (NumLock is enabled)
     1 - Non-Compliant (NumLock is not enabled or error occurred)
 .NOTES
-    Version: 1.2
+    Version: 1.3
     Author: D.Cox
 #>
 
@@ -59,10 +59,10 @@ function Enable-NumLock {
         # Verify the change
         if (Test-NumLockEnabled) {
             Write-Output "NumLock at startup successfully enabled for all users."
-            exit 0  # Success - Compliant
+            return $true
         } else {
             Write-Error "Failed to verify registry change."
-            exit 1  # Failure - Non-Compliant
+            return $false
         }
     } catch {
         Write-Warning "Unable to set registry key directly. Attempting alternative method..."
@@ -75,34 +75,38 @@ function Enable-NumLock {
             if ($LASTEXITCODE -eq 0) {
                 if (Test-NumLockEnabled) {
                     Write-Output "NumLock enabled using alternative method."
-                    exit 0  # Success - Compliant
+                    return $true
                 }
             }
             Write-Error "reg.exe command failed with exit code $LASTEXITCODE"
-            exit 1  # Failure - Non-Compliant
+            return $false
         } catch {
             Write-Error "Error enabling NumLock at startup: $_"
-            exit 1  # Failure - Non-Compliant
+            return $false
         }
     }
 }
 
-# Ensure we're running with admin privileges
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Error "This script requires administrative privileges to modify registry settings."
-    exit 1  # Failure - Non-Compliant
-}
-
 # Main script logic
 try {
+    # Ensure we're running with admin privileges
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Error "This script requires administrative privileges to modify registry settings."
+        exit 1  # Failure - Non-Compliant
+    }
+
     if (Test-NumLockEnabled) {
         Write-Output "NumLock is already enabled at startup."
         exit 0  # Success - Compliant
     } else {
         Write-Output "NumLock is not enabled. Attempting to enable..."
-        Enable-NumLock
-        # Note: Enable-NumLock handles its own exit points
+        $result = Enable-NumLock
+        if ($result) {
+            exit 0  # Success - Compliant
+        } else {
+            exit 1  # Failure - Non-Compliant
+        }
     }
 } catch {
     Write-Error "Unexpected error: $_"

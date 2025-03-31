@@ -1,4 +1,9 @@
 ﻿# Attempt to set the execution policy to Unrestricted
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$GroupName
+)
+
 try {
     Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -Force
     Write-Host "Execution policy set to Unrestricted."
@@ -64,9 +69,8 @@ function Get-GroupMembersRecursively {
 # Connect to Microsoft Graph
 Connect-ToMicrosoftGraph
 
-# Specify the group name and process its members
-$groupName = "Baseline - Microsoft 365 Users"
-$group = Get-MgGroup -Filter "displayName eq '$groupName'"
+# Process the specified group
+$group = Get-MgGroup -Filter "displayName eq '$GroupName'"
 if ($group) {
     Write-Host "Starting to process group: $($group.DisplayName)"
     Get-GroupMembersRecursively -GroupId $group.Id
