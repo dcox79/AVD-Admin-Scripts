@@ -157,6 +157,32 @@ Scripts for managing authentication settings and troubleshooting MFA-related iss
 .\No-MSAuth.ps1
 ```
 
+### Profile Management Scripts
+
+#### 16. transferUsers.ps1
+Transfers FSLogix user profiles from one Azure Fileshare to another. This script is useful for migrating user profiles during storage location changes or data center migrations.
+
+**Features:**
+- Supports multiple source and destination Azure Fileshares
+- Uses Azure Storage SAS tokens for secure access
+- Preserves file permissions and SMB info during transfer
+- Includes dry-run capability for testing
+- Handles user identification through Microsoft Graph API
+
+**Prerequisites:**
+- Microsoft Graph PowerShell SDK
+- AzCopy tool installed
+- List of users in a text file (C:\temp\users.txt)
+- Valid SAS tokens for source and destination Azure Fileshares
+
+**Usage:**
+```powershell
+.\transferUsers.ps1
+```
+The script will prompt for SAS tokens for each fileshare and then process the users from the input file.
+
+**Note:** The script runs in dry-run mode by default. Remove the `--dry-run` parameter from the azcopy commands to perform the actual transfer.
+
 ## Requirements
 
 - Windows 10/11
