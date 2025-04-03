@@ -1,4 +1,4 @@
-﻿# Author: Dave Cox
+﻿# Author: David Cox
 # Date: 11/11/2024
 # This script checks for MFA registration in a specified group.
 # Designed for Intune remediation.

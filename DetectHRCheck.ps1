@@ -1,4 +1,4 @@
-# Author: Dave Cox
+# Author: David Cox
 # Date: 11/11/2024
 # This script checks if the HRCheck printer is installed.
 

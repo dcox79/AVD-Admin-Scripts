@@ -49,9 +49,27 @@ Forcefully stops specified services and logs the actions to the Windows Event Lo
 .\KillRunningService.ps1
 ```
 
+#### 5. DetectEnabledServices.ps1
+Checks if specified services are enabled and should be disabled. Used for compliance monitoring.
+
+**Usage:**
+```powershell
+# Edit the $ServicesToDisable array in the script to specify services
+.\DetectEnabledServices.ps1
+```
+
+#### 6. DisableEnabledScript.ps1
+Disables specified services and logs the actions to the Windows Event Log. Works in conjunction with DetectEnabledServices.ps1.
+
+**Usage:**
+```powershell
+# Edit the $ServicesToDisable array in the script to specify services
+.\DisableEnabledScript.ps1
+```
+
 ### Microsoft 365 Management Scripts
 
-#### 5. Detect-Microsoft365AppsUpdate.ps1
+#### 7. Detect-Microsoft365AppsUpdate.ps1
 Detects if Microsoft 365 Apps need updates by comparing installed versions against minimum required versions for different update channels.
 
 **Usage:**
@@ -59,7 +77,7 @@ Detects if Microsoft 365 Apps need updates by comparing installed versions again
 .\Detect-Microsoft365AppsUpdate.ps1
 ```
 
-#### 6. Remediate-Microsoft365AppsUpdate.ps1
+#### 8. Remediate-Microsoft365AppsUpdate.ps1
 Remediates Microsoft 365 Apps that need updates by triggering the update process.
 
 **Usage:**
@@ -69,7 +87,7 @@ Remediates Microsoft 365 Apps that need updates by triggering the update process
 
 ### Desktop Environment Scripts
 
-#### 7. AddOfficeIcons.ps1
+#### 9. AddOfficeIcons.ps1
 Creates desktop shortcuts for Microsoft Office applications.
 
 **Features:**
@@ -82,7 +100,7 @@ Creates desktop shortcuts for Microsoft Office applications.
 .\AddOfficeIcons.ps1
 ```
 
-#### 8. detect-numlock.ps1 and set-numlock.ps1
+#### 10. detect-numlock.ps1 and set-numlock.ps1
 Scripts to detect and set NumLock state at startup.
 
 **Usage:**
@@ -94,9 +112,33 @@ Scripts to detect and set NumLock state at startup.
 .\set-numlock.ps1
 ```
 
+#### 11. DetectHRCheck.ps1
+Checks if the HRCheck printer is installed on the system.
+
+**Usage:**
+```powershell
+.\DetectHRCheck.ps1
+```
+
+#### 12. DetectIcons.ps1
+Scans for Microsoft Office application shortcuts on both the common and user desktops.
+
+**Usage:**
+```powershell
+.\DetectIcons.ps1
+```
+
+#### 13. DetectZoom.ps1
+Checks if Zoom is installed on the system by searching both machine-wide and user-specific registry locations.
+
+**Usage:**
+```powershell
+.\DetectZoom.ps1
+```
+
 ### Printer Management Scripts
 
-#### 9. AddHRCheck.ps1
+#### 14. AddHRCheck.ps1
 Adds the HRCheck network printer to the machine.
 
 **Usage:**
@@ -106,7 +148,7 @@ Adds the HRCheck network printer to the machine.
 
 ### Authentication Scripts
 
-#### 10. No-MFA.ps1 and No-MSAuth.ps1
+#### 15. No-MFA.ps1 and No-MSAuth.ps1
 Scripts for managing authentication settings and troubleshooting MFA-related issues.
 
 **Usage:**
@@ -141,4 +183,4 @@ These scripts help resolve several common issues in AVD environments:
 
 ## Author
 
-David Cox 
+David Cox

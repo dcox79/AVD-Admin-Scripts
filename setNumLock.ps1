@@ -10,7 +10,7 @@
     1 - Non-Compliant (NumLock is not enabled or error occurred)
 .NOTES
     Version: 1.3
-    Author: D.Cox
+    Author: David Cox
 #>
 
 # Function to check if NumLock is enabled in the registry

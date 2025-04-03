@@ -5,7 +5,7 @@
     This script is designed as an Intune detection script to detect the installed version of the Microsoft 365 Apps against the minimum required version.
 .NOTES
     Version: 1.1
-    Author: D.Cox
+    Author: David Cox
 #>  
 
 

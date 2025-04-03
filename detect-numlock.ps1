@@ -6,7 +6,7 @@
     It checks the registry settings for the default user profile.
 .NOTES
     Version: 1.2
-    Author: D.Cox
+    Author: David Cox
 #>
 
 $registryPath = 'Registry::HKU\.DEFAULT\Control Panel\Keyboard'

@@ -1,4 +1,4 @@
-# Author: Dave Cox
+# Author: David Cox
 # Date: 11/11/2024
 # This script adds the HRCheck printer to the machine.
 # Designed for Intune remediation.
