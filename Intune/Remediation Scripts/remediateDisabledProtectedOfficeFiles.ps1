@@ -52,8 +52,36 @@ $officeVersionMap = @{
     "16.0" = "2016/2019/365"
 }
 
-# Check and remediate each user's registry for disabled protected view settings
+Write-Output "[DEBUG] Checking HKCU for current user: $env:USERDOMAIN\$env:USERNAME"
+foreach ($version in $officeVersions) {
+    $officeName = $officeVersionMap[$version]
+    foreach ($app in $protectedViewSettings.Keys) {
+        foreach ($setting in $protectedViewSettings[$app]) {
+            $regPath = "HKCU:\Software\Microsoft\Office\$version\$app\Security\ProtectedView"
+            try {
+                Write-Output "[DEBUG] Checking path: $regPath for setting: $setting"
+                if (Test-Path $regPath) {
+                    $value = Get-ItemProperty -Path $regPath -Name $setting -ErrorAction SilentlyContinue
+                    Write-Output "[DEBUG] Found $setting, value: $($value.$setting)"
+                    if ($null -ne $value -and $value.$setting -eq 1) {
+                        try {
+                            Set-ItemProperty -Path $regPath -Name $setting -Value 0 -Type DWORD -Force
+                            $remediatedCount++
+                            Write-Output "[DEBUG] Remediated $setting at $regPath for current user."
+                        } catch {
+                            $errorCount++
+                            Write-Output "[DEBUG] Failed to remediate $setting at $regPath for current user: $_"
+                        }
+                    }
+                }
+            } catch { continue }
+        }
+    }
+}
+
+# Check and remediate each user's registry for disabled protected view settings (HKU)
 foreach ($sid in $userSIDs) {
+    Write-Output "[DEBUG] Checking HKU SID: $sid"
     # Get username for the SID if possible (for logging)
     $username = $null
     if ($sid -ne ".DEFAULT" -and $sid -ne "S-1-5-18" -and $sid -ne "S-1-5-19" -and $sid -ne "S-1-5-20") {

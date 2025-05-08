@@ -51,8 +51,41 @@ $officeVersionMap = @{
     "16.0" = "2016/2019/365"
 }
 
-# Check each user's registry for disabled protected view settings
+Write-Output "[DEBUG] Checking HKCU for current user: $env:USERDOMAIN\$env:USERNAME"
+# --- Check HKCU for current user (in addition to all HKU SIDs) ---
+foreach ($version in $officeVersions) {
+    $officeName = $officeVersionMap[$version]
+    foreach ($app in $protectedViewSettings.Keys) {
+        foreach ($setting in $protectedViewSettings[$app]) {
+            $regPath = "HKCU:\Software\Microsoft\Office\$version\$app\Security\ProtectedView"
+            try {
+                Write-Output "[DEBUG] Checking path: $regPath for setting: $setting"
+                if (Test-Path $regPath) {
+                    $value = Get-ItemProperty -Path $regPath -Name $setting -ErrorAction SilentlyContinue
+                    Write-Output "[DEBUG] Found $setting, value: $($value.$setting)"
+                    if ($null -ne $value -and $value.$setting -eq 1) {
+                        $findings += [PSCustomObject]@{
+                            SID = $env:USERDOMAIN + '\' + $env:USERNAME
+                            Username = $env:USERDOMAIN + '\' + $env:USERNAME
+                            RegistryKey = "$regPath\$setting = 1"
+                            Description = "$app in Microsoft Office $officeName has protected view $(
+                                switch ($setting) {
+                                    "DisableInternetFilesInPV" { "from files originating from the internet" }
+                                    "DisableUnsafeLocationsInPV" { "from files located from potentially unsafe locations" }
+                                    "DisableAttachmentsInPV" { "for Outlook attachments" }
+                                }
+                            ) disabled. (Current User)"
+                        }
+                    }
+                }
+            } catch { continue }
+        }
+    }
+}
+
+# --- Check each user's registry for disabled protected view settings (HKU) ---
 foreach ($sid in $userSIDs) {
+    Write-Output "[DEBUG] Checking HKU SID: $sid"
     # Get username for the SID if possible
     $username = $null
     if ($sid -ne ".DEFAULT" -and $sid -ne "S-1-5-18" -and $sid -ne "S-1-5-19" -and $sid -ne "S-1-5-20") {
@@ -84,8 +117,10 @@ foreach ($sid in $userSIDs) {
                 
                 # Check if the registry key exists and is set to 1
                 try {
+                    Write-Output "[DEBUG] Checking path: $regPath for setting: $setting"
                     if (Test-Path $regPath) {
                         $value = Get-ItemProperty -Path $regPath -Name $setting -ErrorAction SilentlyContinue
+                        Write-Output "[DEBUG] Found $setting, value: $($value.$setting)"
                         
                         if ($null -ne $value -and $value.$setting -eq 1) {
                             # Add finding to the array
